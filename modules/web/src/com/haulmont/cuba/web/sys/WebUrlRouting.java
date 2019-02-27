@@ -103,6 +103,11 @@ public class WebUrlRouting implements UrlRouting {
         return UrlTools.parseState(Page.getCurrent().getLocation().getRawFragment());
     }
 
+    @Override
+    public RouteGenerator getRouteGenerator() {
+        return new RouteGeneratorImpl();
+    }
+
     protected void updateState(Screen screen, Map<String, String> urlParams, boolean pushState) {
         NavigationState currentState = getState();
         NavigationState newState = buildNavState(screen, urlParams);
@@ -385,5 +390,33 @@ public class WebUrlRouting implements UrlRouting {
 
     public String getLastHistoryOperation() {
         return lastHistoryOperation;
+    }
+
+    protected class RouteGeneratorImpl implements RouteGenerator {
+
+        @Override
+        public String getRoute(String screenId, Map<String, String> urlParams) {
+            return null;
+        }
+
+        @Override
+        public String getRoute(Class<? extends Screen> screenClass, Map<String, String> urlParams) {
+            return null;
+        }
+
+        @Override
+        public String getEditorRoute(Entity entity, Map<String, String> urlParams) {
+            return null;
+        }
+
+        @Override
+        public String getEditorRoute(Entity entity, String screenId, Map<String, String> urlParams) {
+            return null;
+        }
+
+        @Override
+        public String getEditorRoute(Entity entity, Class<? extends Screen> screenClass, Map<String, String> urlParams) {
+            return null;
+        }
     }
 }
