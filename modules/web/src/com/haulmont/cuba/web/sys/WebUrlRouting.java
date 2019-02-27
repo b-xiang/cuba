@@ -23,6 +23,8 @@ import com.haulmont.cuba.gui.Screens;
 import com.haulmont.cuba.gui.UrlRouting;
 import com.haulmont.cuba.gui.components.DialogWindow;
 import com.haulmont.cuba.gui.components.RootWindow;
+import com.haulmont.cuba.gui.config.WindowConfig;
+import com.haulmont.cuba.gui.config.WindowInfo;
 import com.haulmont.cuba.gui.navigation.NavigationState;
 import com.haulmont.cuba.gui.screen.EditorScreen;
 import com.haulmont.cuba.gui.screen.OpenMode;
@@ -30,6 +32,7 @@ import com.haulmont.cuba.gui.screen.Screen;
 import com.haulmont.cuba.gui.sys.RouteDefinition;
 import com.haulmont.cuba.web.AppUI;
 import com.haulmont.cuba.web.WebConfig;
+import com.haulmont.cuba.web.controllers.ControllerUtils;
 import com.haulmont.cuba.web.gui.UrlHandlingMode;
 import com.haulmont.cuba.web.gui.WebWindow;
 import com.haulmont.cuba.web.gui.components.mainwindow.WebAppWorkArea;
@@ -45,8 +48,10 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Strings.nullToEmpty;
+import static com.haulmont.bali.util.Preconditions.checkNotEmptyString;
 import static com.haulmont.bali.util.Preconditions.checkNotNullArgument;
 import static com.haulmont.cuba.gui.screen.UiControllerUtils.getScreenContext;
 
@@ -58,9 +63,10 @@ public class WebUrlRouting implements UrlRouting {
 
     @Inject
     protected Events events;
-
     @Inject
     protected WebConfig webConfig;
+    @Inject
+    protected WindowConfig windowConfig;
 
     protected AppUI ui;
 
@@ -396,7 +402,52 @@ public class WebUrlRouting implements UrlRouting {
 
         @Override
         public String getRoute(String screenId, Map<String, String> urlParams) {
-            return null;
+            checkNotEmptyString(screenId, "Screen id cannot be empty");
+            checkNotNullArgument(urlParams, "URL params cannot be null");
+
+            WindowInfo windowInfo = windowConfig.getWindowInfo(screenId);
+
+            RouteDefinition screenRouteDef = windowInfo.getRouteDefinition();
+            if (screenRouteDef == null
+                    || StringUtils.isEmpty(screenRouteDef.getPath())) {
+                throw new IllegalStateException(
+                        String.format("Unable to generate route for screen '%s' - no registered route found", screenId));
+            }
+
+            StringBuilder routeBuilder = new StringBuilder(ControllerUtils.getLocationWithoutParams());
+
+            if (screenRouteDef.isRoot()) {
+                routeBuilder.append('#')
+                        .append(screenRouteDef.getPath());
+            } else {
+                Screen rootScreen = getOpenedScreens().getRootScreenOrNull();
+                if (rootScreen == null) {
+                    throw new IllegalStateException("Unable to generate route for non-root screen when no root screen exists");
+                }
+
+                RouteDefinition rootScreenRouteDef = getScreenContext(rootScreen).getWindowInfo().getRouteDefinition();
+                if (rootScreenRouteDef == null
+                        || StringUtils.isEmpty(rootScreenRouteDef.getPath())) {
+                    throw new IllegalStateException(
+                            String.format("Unable to generate route - no registered route found for root screen: '%s'", rootScreen));
+                }
+
+                routeBuilder.append('#')
+                        .append(rootScreenRouteDef.getPath())
+                        .append('/')
+                        .append(screenRouteDef.getPath());
+            }
+
+            if (!urlParams.isEmpty()) {
+                String paramsString = urlParams.entrySet().stream()
+                        .map(param -> String.format("%s=%s", param.getKey(), param.getValue()))
+                        .collect(Collectors.joining("&"));
+
+                routeBuilder.append('?')
+                        .append(paramsString);
+            }
+
+            return routeBuilder.toString();
         }
 
         @Override
