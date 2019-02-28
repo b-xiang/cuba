@@ -222,7 +222,6 @@ public interface UrlRouting {
          *
          * @return generated route
          */
-        String getEditorRoute(Entity entity, Class<? extends Screen> screenClass,
-                              Map<String, String> urlParams);
+        String getEditorRoute(Entity entity, Class<? extends Screen> screenClass, Map<String, String> urlParams);
     }
 }
